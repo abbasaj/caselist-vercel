@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role { CLIENT LAWYER ADMIN }
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String?  @unique
+  image     String?
+  role      Role     @default(CLIENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile   Profile?
+  accounts  Account[]
+  sessions  Session[]
+  casesClient Case[] @relation("ClientCases")
+  casesLawyer Case[] @relation("LawyerCases")
+  messages  Message[]
+  payments  Payment[]
+  ratings   Rating[]
+}
+
+model Profile {
+  id           String @id @default(cuid())
+  userId       String @unique
+  user         User   @relation(fields: [userId], references: [id])
+  specialization String?
+  years        Int?
+  barId        String?
+  availability Json?
+  hourlyFee    Int?
+  fixedFee     Int?
+  bio          String?
+  approved     Boolean @default(false)
+  ratingAvg    Float @default(0)
+  ratingCount  Int @default(0)
+}
+
+model Case {
+  id        String   @id @default(cuid())
+  title     String
+  summary   String
+  status    String   @default("OPEN")
+  clientId  String
+  client    User     @relation("ClientCases", fields: [clientId], references: [id])
+  lawyerId  String?
+  lawyer    User?    @relation("LawyerCases", fields: [lawyerId], references: [id])
+  budgetCents Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id        String @id @default(cuid())
+  caseId    String
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+  case      Case   @relation(fields: [caseId], references: [id])
+  sender    User   @relation(fields: [senderId], references: [id])
+}
+
+model Rating {
+  id        String @id @default(cuid())
+  caseId    String
+  clientId  String
+  lawyerId  String
+  score     Int
+  comment   String?
+  createdAt DateTime @default(now())
+  case      Case   @relation(fields: [caseId], references: [id])
+  client    User   @relation(fields: [clientId], references: [id])
+  lawyer    User   @relation(fields: [lawyerId], references: [id])
+}
+
+model Payment {
+  id         String @id @default(cuid())
+  caseId     String
+  clientId   String
+  lawyerId   String
+  amountCents Int
+  currency   String @default("usd")
+  stripePi   String?
+  status     String @default("HELD")
+  createdAt  DateTime @default(now())
+  case       Case   @relation(fields: [caseId], references: [id])
+  client     User   @relation(fields: [clientId], references: [id])
+  lawyer     User   @relation(fields: [lawyerId], references: [id])
+}
+
+// NextAuth models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
