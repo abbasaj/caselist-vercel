@@ -28,5 +28,8 @@
   "devDependencies": {
     "typescript": "^5.5.4",
     "ts-node": "^10.9.2"
-  }
+  },
+  "prisma": {
+  "seed": "node prisma/seed.js"
 }
+
