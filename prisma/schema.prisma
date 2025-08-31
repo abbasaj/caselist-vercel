@@ -1,35 +1,38 @@
 // prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql" // or "mysql" / "sqlite" depending on your DB
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  CLIENT
-  LAWYER
+enum Role {
   ADMIN
+  LAWYER
+  CLIENT
 }
 
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String?
-  role      UserRole @default(CLIENT)
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   lawyer    Lawyer?
   client    Client?
-  messages  Message[]
 }
 
 model Lawyer {
   id        String   @id @default(cuid())
   name      String
+  bio       String?
+  userId    String   @unique
   user      User     @relation(fields: [userId], references: [id])
-  userId    String
 
   cases     Case[]   @relation("LawyerCases")
   messages  Message[]
@@ -40,49 +43,70 @@ model Lawyer {
 model Client {
   id        String   @id @default(cuid())
   name      String
+  userId    String   @unique
   user      User     @relation(fields: [userId], references: [id])
-  userId    String
 
   cases     Case[]   @relation("ClientCases")
   messages  Message[]
   payments  Payment[]
+  ratings   Rating[]
 }
 
 model Case {
   id        String   @id @default(cuid())
   title     String
-  client    Client   @relation("ClientCases", fields: [clientId], references: [id])
+  details   String?
+  status    String   @default("OPEN")
+  createdAt DateTime @default(now())
+
+  lawyerId  String
   clientId  String
   lawyer    Lawyer   @relation("LawyerCases", fields: [lawyerId], references: [id])
-  lawyerId  String
+  client    Client   @relation("ClientCases", fields: [clientId], references: [id])
 
-  messages  Message[]
   payments  Payment[]
+  messages  Message[]
 }
 
 model Message {
   id        String   @id @default(cuid())
   content   String
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  case      Case?    @relation(fields: [caseId], references: [id])
+  createdAt DateTime @default(now())
+
+  lawyerId  String?
+  lawyer    Lawyer?  @relation(fields: [lawyerId], references: [id])
+
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id])
+
   caseId    String?
+  case      Case?    @relation(fields: [caseId], references: [id])
 }
 
 model Payment {
   id        String   @id @default(cuid())
   amount    Float
-  case      Case     @relation(fields: [caseId], references: [id])
+  status    String   @default("HOLD")
+  createdAt DateTime @default(now())
+
+  lawyerId  String
+  clientId  String
   caseId    String
-  lawyer    Lawyer?  @relation(fields: [lawyerId], references: [id])
-  lawyerId  String?
-  client    Client?  @relation(fields: [clientId], references: [id])
-  clientId  String?
+
+  lawyer    Lawyer   @relation(fields: [lawyerId], references: [id])
+  client    Client   @relation(fields: [clientId], references: [id])
+  case      Case     @relation(fields: [caseId], references: [id])
 }
 
 model Rating {
   id        String   @id @default(cuid())
-  value     Int
-  lawyer    Lawyer   @relation(fields: [lawyerId], references: [id])
+  score     Int
+  comment   String?
+  createdAt DateTime @default(now())
+
   lawyerId  String
+  clientId  String
+
+  lawyer    Lawyer   @relation(fields: [lawyerId], references: [id])
+  client    Client   @relation(fields: [clientId], references: [id])
 }
